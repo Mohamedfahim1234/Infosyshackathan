@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  Calendar, 
-  User, 
+import {
+  FileText,
+  Calendar,
+  User,
   Eye,
   Clock,
-  Filter,
   Search
 } from 'lucide-react';
 import { Application } from '../../types';
@@ -20,68 +20,51 @@ const PendingApplications: React.FC<PendingApplicationsProps> = ({ onViewApplica
   const { t } = useTranslation();
   const [filter, setFilter] = useState({ type: 'all', priority: 'all' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingApplications, setPendingApplications] = useState<Application[]>([]);
 
-  // Mock pending applications data
-  const pendingApplications: Application[] = [
-    {
-      id: 'APP001',
-      userId: 'user1',
-      type: 'birth',
-      personalInfo: {
-        fullName: 'John Doe',
-        email: 'john@example.com',
-        mobile: '9876543210',
-        address: '123 Main St, Mumbai'
-      },
-      birthRegistration: {
-        childName: 'Baby Doe',
-        dateOfBirth: '2024-01-10',
-        fatherName: 'John Doe',
-        motherName: 'Jane Doe',
-        parentIdProof: null,
-        medicalRecord: null,
-        fullAddress: '123 Main St, Mumbai',
-        parentNativity: 'Mumbai'
-      },
-      documents: [],
-      status: 'submitted',
-      submittedAt: new Date('2024-01-15'),
-      estimatedDelivery: new Date('2024-01-22'),
-      qrCode: 'APP001'
-    },
-    {
-      id: 'APP002',
-      userId: 'user2',
-      type: 'income',
-      personalInfo: {
-        fullName: 'Jane Smith',
-        email: 'jane@example.com',
-        mobile: '9876543211',
-        address: '456 Oak Ave, Delhi'
-      },
-      documents: [],
-      status: 'under_review',
-      submittedAt: new Date('2024-01-14'),
-      estimatedDelivery: new Date('2024-01-24'),
-      qrCode: 'APP002'
-    },
-    {
-      id: 'APP003',
-      userId: 'user3',
-      type: 'caste',
-      personalInfo: {
-        fullName: 'Bob Johnson',
-        email: 'bob@example.com',
-        mobile: '9876543212',
-        address: '789 Pine Rd, Bangalore'
-      },
-      documents: [],
-      status: 'submitted',
-      submittedAt: new Date('2024-01-13'),
-      estimatedDelivery: new Date('2024-01-23'),
-      qrCode: 'APP003'
-    }
-  ];
+  useEffect(() => {
+    const fetchPendingApplications = async () => {
+      try {
+        const response = await axios.post('http://localhost:8000/officer/certificates',{}); // Replace with your actual API
+        const birthCertificates = response.data.birthCertificates || [];
+
+        const formatted = birthCertificates
+          .filter((app: any) => app.Isapproved === false && app.Isrejected === false)
+          .map((item: any) => ({
+            id: item._id,
+            userId: 'N/A',
+            type: 'birth',
+            personalInfo: {
+              fullName: item.childName,
+              email: '',
+              mobile: '',
+              address: item.address
+            },
+            birthRegistration: {
+              childName: item.childName,
+              dateOfBirth: item.DOB,
+              fatherName: item.fatherName,
+              motherName: item.motherName,
+              parentIdProof: item.parentIdProof,
+              medicalRecord: item.medicalCertificate,
+              fullAddress: item.address,
+              parentNativity: item.parentNativity
+            },
+            documents: [],
+            status: 'submitted',
+            submittedAt: new Date(item.createdAt),
+            estimatedDelivery: new Date(new Date(item.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000),
+            qrCode: item._id
+          }));
+
+        setPendingApplications(formatted);
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+      }
+    };
+
+    fetchPendingApplications();
+  }, []);
 
   const getCertificateTypeLabel = (type: string) => {
     switch (type) {
@@ -104,11 +87,10 @@ const PendingApplications: React.FC<PendingApplicationsProps> = ({ onViewApplica
   };
 
   const getPriorityLevel = (type: string, submittedAt: Date) => {
-    const daysSinceSubmission = Math.floor((Date.now() - submittedAt.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const daysSince = Math.floor((Date.now() - new Date(submittedAt).getTime()) / (1000 * 60 * 60 * 24));
     if (type === 'birth') return 'high';
-    if (daysSinceSubmission > 5) return 'urgent';
-    if (daysSinceSubmission > 3) return 'medium';
+    if (daysSince > 5) return 'urgent';
+    if (daysSince > 3) return 'medium';
     return 'normal';
   };
 
@@ -122,12 +104,13 @@ const PendingApplications: React.FC<PendingApplicationsProps> = ({ onViewApplica
   };
 
   const filteredApplications = pendingApplications.filter(app => {
-    const matchesSearch = app.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         app.personalInfo.fullName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      app.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.personalInfo.fullName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filter.type === 'all' || app.type === filter.type;
     const priority = getPriorityLevel(app.type, app.submittedAt);
     const matchesPriority = filter.priority === 'all' || priority === filter.priority;
-    
+
     return matchesSearch && matchesType && matchesPriority;
   });
 
@@ -146,7 +129,7 @@ const PendingApplications: React.FC<PendingApplicationsProps> = ({ onViewApplica
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          
+
           <select
             value={filter.type}
             onChange={(e) => setFilter({ ...filter, type: e.target.value })}
@@ -158,7 +141,7 @@ const PendingApplications: React.FC<PendingApplicationsProps> = ({ onViewApplica
             <option value="caste">Caste Certificate</option>
             <option value="residence">Residence Certificate</option>
           </select>
-          
+
           <select
             value={filter.priority}
             onChange={(e) => setFilter({ ...filter, priority: e.target.value })}
@@ -176,8 +159,8 @@ const PendingApplications: React.FC<PendingApplicationsProps> = ({ onViewApplica
       <div className="grid gap-4">
         {filteredApplications.map((application, index) => {
           const priority = getPriorityLevel(application.type, application.submittedAt);
-          const daysSinceSubmission = Math.floor((Date.now() - application.submittedAt.getTime()) / (1000 * 60 * 60 * 24));
-          
+          const daysSince = Math.floor((Date.now() - application.submittedAt.getTime()) / (1000 * 60 * 60 * 24));
+
           return (
             <motion.div
               key={application.id}
@@ -208,12 +191,12 @@ const PendingApplications: React.FC<PendingApplicationsProps> = ({ onViewApplica
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="w-4 h-4" />
-                        <span>{daysSinceSubmission} days ago</span>
+                        <span>{daysSince} days ago</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

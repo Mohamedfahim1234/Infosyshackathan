@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Shield } from 'lucide-react';
+import axios from 'axios';
 
 interface OfficerLoginProps {
   onBack: () => void;
@@ -11,7 +12,6 @@ interface OfficerLoginProps {
 const OfficerLogin: React.FC<OfficerLoginProps> = ({ onBack, onLogin }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
-    officerId: '',
     email: '',
     password: ''
   });
@@ -20,19 +20,41 @@ const OfficerLogin: React.FC<OfficerLoginProps> = ({ onBack, onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    try {
+      const response = await axios.post(`http://localhost:8000/officer/login`, formData);
+      if (response.data.success) {
+        setLoading(false);
+        alert(t('login.loginSuccess'));
+        onLogin({
+          id: response.data.officer._id,
+          name: response.data.officer.name,
+          email: response.data.officer.email,
+          mobile: response.data.officer.phone,
+          role: 'officer',
+          token: response.data.token,
+        });
+      } else {
+        alert(response.data.message);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error during officer login:', error);
+      alert(t('login.errorLogin'));
+      setLoading(false);
+    }
     
     // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      onLogin({
-        id: '1',
-        name: 'Officer Name',
-        email: formData.email,
-        mobile: '9876543210',
-        role: 'officer',
-        officerId: formData.officerId
-      });
-    }, 1000);
+    // setTimeout(() => {
+    //   setLoading(false);
+    //   onLogin({
+    //     id: '1',
+    //     name: 'Officer Name',
+    //     email: formData.email,
+    //     mobile: '9876543210',
+    //     role: 'officer',
+    //     officerId: formData.officerId
+    //   });
+    // }, 1000);
   };
 
   return (
@@ -60,7 +82,7 @@ const OfficerLogin: React.FC<OfficerLoginProps> = ({ onBack, onLogin }) => {
 
         <div className="bg-white p-8 rounded-lg shadow-lg">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Officer ID
               </label>
@@ -72,7 +94,7 @@ const OfficerLogin: React.FC<OfficerLoginProps> = ({ onBack, onLogin }) => {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 required
               />
-            </div>
+            </div> */}
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

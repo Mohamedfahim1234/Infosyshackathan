@@ -1,42 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  Search,
-  Filter,
-  User,
-  Calendar,
+import {
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
   AlertCircle,
   ArrowLeft
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell
+} from 'recharts';
 import { Application } from '../../types';
 import PendingApplications from './PendingApplications';
 import ReviewApplication from './ReviewApplication';
 
 const OfficerDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const [filter, setFilter] = useState({ district: 'all', status: 'all' });
-  const [searchQuery, setSearchQuery] = useState('');
+
+  const [applications, setApplications] = useState<Application[]>([]);
   const [currentView, setCurrentView] = useState<'dashboard' | 'pending' | 'review'>('dashboard');
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
 
-  // Mock data
+  useEffect(() => {
+    const fetchCertificates = async () => {
+      try {
+        const response = await axios.post('http://localhost:8000/officer/certificates',{}); // Replace with actual endpoint
+        const birthCertificates = response.data.birthCertificates;
+
+        const formattedData = birthCertificates.map((item: any) => ({
+          id: item._id,
+          applicant: item.childName,
+          type: 'Birth Certificate',
+          district: item.address || 'N/A',
+          submittedAt: new Date(item.createdAt).toISOString().split('T')[0],
+          status: item.Isapproved
+            ? 'approved'
+            : item.Isrejected
+            ? 'rejected'
+            : 'pending'
+        }));
+
+        setApplications(formattedData);
+      } catch (error) {
+        console.error('Error fetching birth certificates:', error);
+      }
+    };
+
+    fetchCertificates();
+  }, []);
+
   const stats = {
-    total: 245,
-    pending: 87,
-    approved: 132,
-    rejected: 26
+    total: applications.length,
+    pending: applications.filter(app => app.status === 'pending').length,
+    approved: applications.filter(app => app.status === 'approved').length,
+    rejected: applications.filter(app => app.status === 'rejected').length
   };
 
   const chartData = [
-    { name: 'Pending', value: 87, color: '#f59e0b' },
-    { name: 'Approved', value: 132, color: '#10b981' },
-    { name: 'Rejected', value: 26, color: '#ef4444' }
+    { name: 'Pending', value: stats.pending, color: '#f59e0b' },
+    { name: 'Approved', value: stats.approved, color: '#10b981' },
+    { name: 'Rejected', value: stats.rejected, color: '#ef4444' }
   ];
 
   const monthlyData = [
@@ -48,38 +75,6 @@ const OfficerDashboard: React.FC = () => {
     { month: 'Jun', applications: 118 }
   ];
 
-  const applications = [
-    {
-      id: 'APP001',
-      applicant: 'John Doe',
-      type: 'Income Certificate',
-      district: 'Mumbai',
-      submittedAt: '2024-01-15',
-      status: 'pending'
-    },
-    {
-      id: 'APP002',
-      applicant: 'Jane Smith',
-      type: 'Caste Certificate',
-      district: 'Delhi',
-      submittedAt: '2024-01-14',
-      status: 'under_review'
-    },
-    {
-      id: 'APP003',
-      applicant: 'Bob Johnson',
-      type: 'Birth Certificate',
-      district: 'Bangalore',
-      submittedAt: '2024-01-13',
-      status: 'approved'
-    }
-  ];
-
-  const handleAction = (applicationId: string, action: string) => {
-    console.log(`Action: ${action} for application: ${applicationId}`);
-    // Handle application action
-  };
-
   const handleViewApplication = (application: Application) => {
     setSelectedApplication(application);
     setCurrentView('review');
@@ -87,34 +82,12 @@ const OfficerDashboard: React.FC = () => {
 
   const handleStatusUpdate = (applicationId: string, status: string, reason?: string) => {
     console.log(`Application ${applicationId} updated to ${status}`, reason);
-    // Handle status update - would typically make API call here
-    // For demo, we'll just go back to pending applications
     setCurrentView('pending');
   };
 
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
     setSelectedApplication(null);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'under_review': return 'bg-blue-100 text-blue-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'under_review': return <AlertCircle className="w-4 h-4" />;
-      case 'approved': return <CheckCircle className="w-4 h-4" />;
-      case 'rejected': return <XCircle className="w-4 h-4" />;
-      default: return <FileText className="w-4 h-4" />;
-    }
   };
 
   return (
@@ -135,7 +108,7 @@ const OfficerDashboard: React.FC = () => {
               <p className="text-gray-600 mt-2">Manage and track certificate applications</p>
             </div>
           </div>
-          
+
           {currentView === 'dashboard' && (
             <div className="flex space-x-3">
               <motion.button
@@ -155,10 +128,7 @@ const OfficerDashboard: React.FC = () => {
           <>
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="bg-white p-6 rounded-lg shadow-lg"
-              >
+              <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-lg shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">{t('dashboard.totalApplications')}</p>
@@ -168,10 +138,7 @@ const OfficerDashboard: React.FC = () => {
                 </div>
               </motion.div>
 
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="bg-white p-6 rounded-lg shadow-lg"
-              >
+              <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-lg shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">{t('dashboard.pending')}</p>
@@ -181,10 +148,7 @@ const OfficerDashboard: React.FC = () => {
                 </div>
               </motion.div>
 
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="bg-white p-6 rounded-lg shadow-lg"
-              >
+              <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-lg shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">{t('dashboard.approved')}</p>
@@ -194,10 +158,7 @@ const OfficerDashboard: React.FC = () => {
                 </div>
               </motion.div>
 
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="bg-white p-6 rounded-lg shadow-lg"
-              >
+              <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-lg shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">{t('dashboard.rejected')}</p>
@@ -245,41 +206,14 @@ const OfficerDashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             </div>
-
-            {/* Quick Stats */}
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-900">3 applications approved today</span>
-                  </div>
-                  <span className="text-xs text-gray-500">2 hours ago</span>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Clock className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm text-gray-900">5 new applications received</span>
-                  </div>
-                  <span className="text-xs text-gray-500">4 hours ago</span>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <AlertCircle className="w-5 h-5 text-yellow-600" />
-                    <span className="text-sm text-gray-900">2 applications need attention</span>
-                  </div>
-                  <span className="text-xs text-gray-500">6 hours ago</span>
-                </div>
-              </div>
-            </div>
           </>
         )}
 
         {currentView === 'pending' && (
-          <PendingApplications onViewApplication={handleViewApplication} />
+          <PendingApplications
+            applications={applications.filter(app => app.status === 'pending')}
+            onViewApplication={handleViewApplication}
+          />
         )}
 
         {currentView === 'review' && selectedApplication && (

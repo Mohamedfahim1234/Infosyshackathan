@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ArrowLeft, User, Smartphone } from 'lucide-react';
 
@@ -17,26 +18,61 @@ const UserLogin: React.FC<UserLoginProps> = ({ onBack, onLogin }) => {
 
   const handleSendOtp = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      setStep('otp');
-    }, 1000);
+    try {
+      const response = await axios.post(`http://localhost:8000/user/sendmail`, { email });
+      if (response.data.success) {
+        setStep('otp');
+        setLoading(false);
+        alert(t('login.otpSent', { email }));
+      } else {
+        alert(response.data.message);
+
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      alert(t('login.errorSendingOtp'));
+    }
+    // setTimeout(() => {
+    //   setLoading(false);
+    //   setStep('otp');
+    // }, 1000);
   };
 
   const handleVerifyOtp = async () => {
     setLoading(true);
+    try {
+      const response = await axios.post(`http://localhost:8000/user/verifyotp`, { email, otp });
+      if (response.data.success) {
+        setLoading(false);
+        alert(t('login.otpVerified'));
+        onLogin({
+          id: response.data.user._id,
+          name: response.data.user.name,
+          email: response.data.user.email,
+          mobile: response.data.user.phone,
+          role: 'user',
+          token: response.data.token
+        });
+      } else {
+        alert(response.data.message);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      alert(t('login.errorVerifyingOtp'));
+    }
     // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      onLogin({
-        id: '1',
-        name: 'User Name',
-        email: email,
-        mobile: '9876543210',
-        role: 'user'
-      });
-    }, 1000);
+    // setTimeout(() => {
+    //   setLoading(false);
+    //   onLogin({
+    //     id: '1',
+    //     name: 'User Name',
+    //     email: email,
+    //     mobile: '9876543210',
+    //     role: 'user'
+    //   });
+    // }, 1000);
   };
 
   return (

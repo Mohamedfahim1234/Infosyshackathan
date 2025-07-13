@@ -17,6 +17,7 @@ import {
   Send
 } from 'lucide-react';
 import { Application } from '../../types';
+import axios from 'axios';
 
 interface ReviewApplicationProps {
   application: Application;
@@ -48,17 +49,47 @@ const ReviewApplication: React.FC<ReviewApplicationProps> = ({
 
   const handleApprove = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      onStatusUpdate(application.id, 'approved');
+    try {
+      const response = await axios.put(`http://localhost:8000/officer/birthcertificates/update`,{Isapproved: true, Isrejected: false, userId: application.id}); // Replace with actual endpoint
+      if (response.data.success) {
+        onStatusUpdate(application.id, 'approved');
+        alert(t('application.approvedSuccess'));
+        setLoading(false);
+      } else {
+        alert(response.data.message);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error approving application:', error);
+      alert(t('application.approvedError'));
       setLoading(false);
-    }, 1000);
+    }
+    // Simulate API call
+    // setTimeout(() => {
+    //   onStatusUpdate(application.id, 'approved');
+    //   setLoading(false);
+    // }, 1000);
   };
 
   const handleReject = async () => {
     if (!rejectReason.trim()) return;
     
     setLoading(true);
+     try {
+      const response = await axios.put(`http://localhost:8000/officer/birthcertificates/update`,{Isapproved: false, Isrejected: true, userId: application.id}); // Replace with actual endpoint
+      if (response.data.success) {
+        onStatusUpdate(application.id, 'rejected');
+        alert(t('application.rejected'));
+        setLoading(false);
+      } else {
+        alert(response.data.message);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error approving application:', error);
+      alert(t('application.approvedError'));
+      setLoading(false);
+    }
     // Simulate API call
     setTimeout(() => {
       onStatusUpdate(application.id, 'rejected', rejectReason);
@@ -80,8 +111,8 @@ const ReviewApplication: React.FC<ReviewApplicationProps> = ({
   };
 
   const mockDocuments = [
-    { name: 'Parent_ID_Proof.pdf', size: '2.3 MB', type: 'pdf' },
-    { name: 'Medical_Record.jpg', size: '1.8 MB', type: 'image' }
+    { name: 'Parent_ID_Proof.pdf', size: '2.3 MB', path:application.birthRegistration?.parentIdProof  },
+    { name: 'Medical_Record.jpg', size: '1.8 MB',path: application.birthRegistration?.medicalCertificate, }
   ];
 
   return (
@@ -236,9 +267,9 @@ const ReviewApplication: React.FC<ReviewApplicationProps> = ({
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200">
+                  <a href={(doc.path)} target="_blank" rel="noopener noreferrer" className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                       <Eye className="w-4 h-4" />
-                    </button>
+                    </a>
                     <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-200">
                       <Download className="w-4 h-4" />
                     </button>
