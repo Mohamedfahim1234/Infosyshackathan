@@ -7,7 +7,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertCircle,
   ArrowLeft
 } from 'lucide-react';
 import {
@@ -55,7 +54,7 @@ const OfficerDashboard: React.FC = () => {
 
   const stats = {
     total: applications.length,
-    pending: applications.filter(app => app.status === 'pending').length,
+    pending: applications.filter(app => app.status === 'submitted' || app.status === 'under_review' || app.status === 'info_requested').length,
     approved: applications.filter(app => app.status === 'approved').length,
     rejected: applications.filter(app => app.status === 'rejected').length
   };
@@ -182,7 +181,7 @@ const OfficerDashboard: React.FC = () => {
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => percent !== undefined ? `${name} ${(percent * 100).toFixed(0)}%` : name}
                     >
                       {chartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -211,7 +210,6 @@ const OfficerDashboard: React.FC = () => {
 
         {currentView === 'pending' && (
           <PendingApplications
-            applications={applications.filter(app => app.status === 'pending')}
             onViewApplication={handleViewApplication}
           />
         )}
