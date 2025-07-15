@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-export interface IUser extends mongoose.Document {  
+export interface IUser extends mongoose.Document {
     name: string;
     email: string;
     phone: string;
@@ -12,7 +12,7 @@ export interface IUser extends mongoose.Document {
 
 const userSchema = new mongoose.Schema<IUser>({
     name: { type: String, },
-    email: { type: String, },  
+    email: { type: String, },
     phone: { type: String, },
     otp: { type: String, },
     isVerified: { type: Boolean, default: false },

@@ -45,4 +45,4 @@ export const updateBirthCertificate = async (req: Request, res: Response) => {
     console.error("Error updating birth certificate:", error);
     res.status(500).json({ message: "Internal server error." });
   }
-}   
+}
